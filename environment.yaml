@@ -24,10 +24,10 @@ dependencies:
   - intel-openmp=2019.4=243
   - jpeg=9c=h14c3975_1001
   - kiwisolver=1.2.0=py36hdb11119_0
-  - ld_impl_linux-64=2.34=h53a641e_4
+  - ld_impl_linux-64=2.34
   - libffi=3.2.1=he1b5a44_1007
   - libgcc-ng=9.2.0=h24d8f2e_2
-  - libgfortran-ng=7.5.0=hdf63c60_6
+  - libgfortran-ng=7.5.0
   - libgomp=9.2.0=h24d8f2e_2
   - libpng=1.6.37=hed695b0_1
   - libstdcxx-ng=9.2.0=hdf63c60_2
@@ -52,7 +52,7 @@ dependencies:
   - python=3.6.10=h8356626_1011_cpython
   - python-dateutil=2.8.1=py_0
   - python_abi=3.6=1_cp36m
-  - pytorch=1.5.0=py3.6_cuda10.1.243_cudnn7.6.3_0
+  - pytorch=1.5.1=py3.6_cuda10.1.243_cudnn7.6.3_0
   - pywavelets=1.1.1=py36h785e9b2_1
   - readline=8.0=hf8c457e_0
   - scikit-image=0.17.2=py36h830a2c2_0
@@ -63,7 +63,7 @@ dependencies:
   - tifffile=2020.5.11=py_0
   - tk=8.6.10=hed695b0_0
   - toolz=0.10.0=py_0
-  - torchvision=0.6.0=py36_cu101
+  - torchvision=0.6.1=py36_cu101
   - tornado=6.0.4=py36h8c4c3a4_1
   - wheel=0.34.2=py_1
   - xz=5.2.5=h516909a_0

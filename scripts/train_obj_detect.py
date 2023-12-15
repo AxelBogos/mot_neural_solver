@@ -37,6 +37,7 @@ def get_detection_model(num_classes):
 
     return model
 
+
 def get_transform(train):
     transforms = []
     # converts the image, a PIL image, into a PyTorch Tensor
@@ -50,7 +51,6 @@ def get_transform(train):
 
 @ex.automain
 def main(_config):
-
     torch.manual_seed(1)
 
     # use our dataset and defined transformations
@@ -73,14 +73,14 @@ def main(_config):
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(params, **_config['optimizer_params'])
 
+    os.makedirs(osp.join(OUTPUT_PATH, 'trained_models/frcnn'), exist_ok=True)
 
-    os.makedirs(osp.join(OUTPUT_PATH, 'trained_models/frcnn'),  exist_ok=True)
-
-    for epoch in range(1, _config['train_params']['num_epochs']+ 1):
+    for epoch in range(1, _config['train_params']['num_epochs'] + 1):
         train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
         if not _config['train_params']['save_only_last_ckpt']:
-            torch.save(model.state_dict(), osp.join(OUTPUT_PATH, 'trained_models/frcnn/mot20', f"mot20_frcnn_epoch_{epoch}.pt.tar"))
+            torch.save(model.state_dict(),
+                       osp.join(OUTPUT_PATH, 'trained_models/frcnn/mot20', f"mot20_frcnn_epoch_{epoch}.pt.tar"))
 
     if _config['train_params']['save_only_last_ckpt']:
-        torch.save(model.state_dict(), osp.join(OUTPUT_PATH, 'trained_models/frcnn', f"mot20_frcnn_epoch_{epoch}.pt.tar"))
-
+        torch.save(model.state_dict(),
+                   osp.join(OUTPUT_PATH, 'trained_models/frcnn', f"mot20_frcnn_epoch_{epoch}.pt.tar"))

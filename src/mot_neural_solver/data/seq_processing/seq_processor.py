@@ -23,8 +23,7 @@ If you want to add new/custom sequences:
 import pandas as pd
 import numpy as np
 
-from lapsolver import solve_dense
-
+import lapsolver
 from mot_neural_solver.data.seq_processing.MOTCha_loader import get_mot_det_df, get_mot_det_df_from_gt
 from mot_neural_solver.data.seq_processing.MOT15_loader import get_mot15_det_df, get_mot15_det_df_from_gt
 from mot_neural_solver.utils.iou import iou
@@ -59,7 +58,6 @@ _ENSURE_BOX_IN_FRAME = {'MOT': False,
                         'MOT15': True,
                         'MOT15_gt': False}
 
-
 # We now map each sequence name to a sequence type in _SEQ_TYPES
 _SEQ_TYPES = {}
 
@@ -73,9 +71,9 @@ for seq_name in mot20_seqs:
     else:
         _SEQ_TYPES[seq_name] = 'MOT'
 
-
 # MOT17 Sequences
-mot17_seqs = [f'MOT17-{seq_num:02}-{det}' for seq_num in (2, 4, 5, 9, 10, 11, 13) for det in ('DPM', 'SDP', 'FRCNN', 'GT')]
+mot17_seqs = [f'MOT17-{seq_num:02}-{det}' for seq_num in (2, 4, 5, 9, 10, 11, 13) for det in
+              ('DPM', 'SDP', 'FRCNN', 'GT')]
 mot17_seqs += [f'MOT17-{seq_num:02}-{det}' for seq_num in (1, 3, 6, 7, 8, 12, 14) for det in ('DPM', 'SDP', 'FRCNN')]
 for seq_name in mot17_seqs:
     if 'GT' in seq_name:
@@ -97,6 +95,7 @@ for seq_name in mot15_seqs:
     else:
         _SEQ_TYPES[seq_name] = 'MOT15'
 
+
 ##########################################################################################
 # Classes used to store and process detections for every sequence
 ##########################################################################################
@@ -114,6 +113,7 @@ class DataFrameWSeqInfo(pd.DataFrame):
     @property
     def _constructor(self):
         return DataFrameWSeqInfo
+
 
 class MOTSeqProcessor:
     """
@@ -139,7 +139,8 @@ class MOTSeqProcessor:
         |                   ...
         |                   +-- {frameN}.jpg
     """
-    def __init__(self, dataset_path, seq_name, dataset_params, cnn_model = None, logger = None):
+
+    def __init__(self, dataset_path, seq_name, dataset_params, cnn_model=None, logger=None):
         self.seq_name = seq_name
         self.dataset_path = dataset_path
         self.seq_type = _SEQ_TYPES[seq_name]
@@ -189,7 +190,7 @@ class MOTSeqProcessor:
 
                 iou_matrix[iou_matrix < self.dataset_params['gt_assign_min_iou']] = np.nan
                 dist_matrix = 1 - iou_matrix
-                assigned_detect_ixs, assigned_detect_ixs_ped_ids = solve_dense(dist_matrix)
+                assigned_detect_ixs, assigned_detect_ixs_ped_ids = lapsolver.solve_dense(dist_matrix)
                 unassigned_detect_ixs = np.array(list(set(range(frame_detects.shape[0])) - set(assigned_detect_ixs)))
 
                 assigned_detect_ixs_index = frame_detects.iloc[assigned_detect_ixs].index
@@ -206,7 +207,8 @@ class MOTSeqProcessor:
         It also adds seq_info_dict as an attribute to self.det_df, containing sequence metainformation (img size,
         fps, whether it has ground truth annotations, etc.)
         """
-        self.det_df, seq_info_dict, self.gt_df = self.det_df_loader(self.seq_name, self.dataset_path, self.dataset_params)
+        self.det_df, seq_info_dict, self.gt_df = self.det_df_loader(self.seq_name, self.dataset_path,
+                                                                    self.dataset_params)
 
         self.det_df = DataFrameWSeqInfo(self.det_df)
         self.det_df.seq_info_dict = seq_info_dict
@@ -225,11 +227,11 @@ class MOTSeqProcessor:
         frame_height, frame_width = self.det_df.seq_info_dict['frame_height'], self.det_df.seq_info_dict['frame_width']
         conds = (self.det_df['bb_width'] > 0) & (self.det_df['bb_height'] > 0)
         conds = conds & (self.det_df['bb_right'] > 0) & (self.det_df['bb_bot'] > 0)
-        conds  =  conds & (self.det_df['bb_left'] < frame_width) & (self.det_df['bb_top'] < frame_height)
+        conds = conds & (self.det_df['bb_left'] < frame_width) & (self.det_df['bb_top'] < frame_height)
         self.det_df = self.det_df[conds].copy()
 
-        self.det_df.sort_values(by = 'frame', inplace = True)
-        self.det_df['detection_id'] = np.arange(self.det_df.shape[0]) # This id is used for future tastks
+        self.det_df.sort_values(by='frame', inplace=True)
+        self.det_df['detection_id'] = np.arange(self.det_df.shape[0])  # This id is used for future tastks
 
         return self.det_df
 
@@ -238,7 +240,7 @@ class MOTSeqProcessor:
         Stores processed detections DataFrame in disk.
         """
         processed_dets_path = osp.join(self.det_df.seq_info_dict['seq_path'], 'processed_data', 'det')
-        os.makedirs(processed_dets_path, exist_ok = True)
+        os.makedirs(processed_dets_path, exist_ok=True)
         det_df_path = osp.join(processed_dets_path, self.det_df.seq_info_dict['det_file_name'] + '.pkl')
         self.det_df.to_pickle(det_df_path)
         print(f"Finished processing detections for seq {self.seq_name}. Result was stored at {det_df_path}")
@@ -256,14 +258,17 @@ class MOTSeqProcessor:
         """
         from time import time
         assert self.cnn_model is not None
-        assert self.dataset_params['reid_embeddings_dir'] is not None and self.dataset_params['node_embeddings_dir'] is not None
+        assert self.dataset_params['reid_embeddings_dir'] is not None and self.dataset_params[
+            'node_embeddings_dir'] is not None
 
         # Create dirs to store embeddings
         node_embeds_path = osp.join(self.det_df.seq_info_dict['seq_path'], 'processed_data/embeddings',
-                                   self.det_df.seq_info_dict['det_file_name'], self.dataset_params['node_embeddings_dir'])
+                                    self.det_df.seq_info_dict['det_file_name'],
+                                    self.dataset_params['node_embeddings_dir'])
 
         reid_embeds_path = osp.join(self.det_df.seq_info_dict['seq_path'], 'processed_data/embeddings',
-                                   self.det_df.seq_info_dict['det_file_name'], self.dataset_params['reid_embeddings_dir'])
+                                    self.det_df.seq_info_dict['det_file_name'],
+                                    self.dataset_params['reid_embeddings_dir'])
 
         if osp.exists(node_embeds_path):
             print("Found existing stored node embeddings. Deleting them and replacing them for new ones")
@@ -283,18 +288,18 @@ class MOTSeqProcessor:
         print(f"Computing embeddings for {self.det_df.shape[0]} detections")
 
         num_dets = self.det_df.shape[0]
-        max_dets_per_df = int(1e5) # Needs to be larger than the maximum amount of dets possible to have in one frame
+        max_dets_per_df = int(1e5)  # Needs to be larger than the maximum amount of dets possible to have in one frame
 
-        frame_cutpoints = [self.det_df.frame.iloc[i] for i in np.arange(0, num_dets , max_dets_per_df, dtype=int)]
+        frame_cutpoints = [self.det_df.frame.iloc[i] for i in np.arange(0, num_dets, max_dets_per_df, dtype=int)]
         frame_cutpoints += [self.det_df.frame.iloc[-1] + 1]
 
         for frame_start, frame_end in zip(frame_cutpoints[:-1], frame_cutpoints[1:]):
             sub_df_mask = self.det_df.frame.between(frame_start, frame_end - 1)
             sub_df = self.det_df.loc[sub_df_mask]
 
-            #print(sub_df.frame.min(), sub_df.frame.max())
+            # print(sub_df.frame.min(), sub_df.frame.max())
             bbox_dataset = BoundingBoxDataset(sub_df, seq_info_dict=self.det_df.seq_info_dict,
-                                              return_det_ids_and_frame = True)
+                                              return_det_ids_and_frame=True)
             bbox_loader = DataLoader(bbox_dataset, batch_size=self.dataset_params['img_batch_size'], pin_memory=True,
                                      num_workers=4)
 
@@ -309,8 +314,8 @@ class MOTSeqProcessor:
                     reid_embeds.append(reid_out.cpu())
                     frame_nums.append(frame_num)
                     det_ids.append(det_id)
-            #print("IT TOOK ", time() - t)
-            #print(f"Finished computing embeddings")
+            # print("IT TOOK ", time() - t)
+            # print(f"Finished computing embeddings")
 
             det_ids = torch.cat(det_ids, dim=0)
             frame_nums = torch.cat(frame_nums, dim=0)
@@ -334,7 +339,7 @@ class MOTSeqProcessor:
                 torch.save(frame_node_embeds, frame_node_embeds_path)
                 torch.save(frame_reid_embeds, frame_reid_embeds_path)
 
-            #print("Finished storing embeddings")
+            # print("Finished storing embeddings")
         print("Finished computing and storing embeddings")
 
     def process_detections(self):
@@ -359,8 +364,10 @@ class MOTSeqProcessor:
         seq_det_df_path = osp.join(seq_path, 'processed_data/det', det_file_to_use + '.pkl')
 
         # If loading precomputed embeddings, check if embeddings have already been stored (otherwise, we need to process dets again)
-        node_embeds_path = osp.join(seq_path, 'processed_data/embeddings', det_file_to_use, self.dataset_params['node_embeddings_dir'])
-        reid_embeds_path = osp.join(seq_path, 'processed_data/embeddings', det_file_to_use, self.dataset_params['reid_embeddings_dir'])
+        node_embeds_path = osp.join(seq_path, 'processed_data/embeddings', det_file_to_use,
+                                    self.dataset_params['node_embeddings_dir'])
+        reid_embeds_path = osp.join(seq_path, 'processed_data/embeddings', det_file_to_use,
+                                    self.dataset_params['reid_embeddings_dir'])
         try:
             num_frames = len(pd.read_pickle(seq_det_df_path)['frame'].unique())
             processed_dets_exist = True
@@ -368,7 +375,7 @@ class MOTSeqProcessor:
             num_frames = -1
             processed_dets_exist = False
 
-        embeds_ok = osp.exists(node_embeds_path) and len(os.listdir(node_embeds_path)) ==num_frames
+        embeds_ok = osp.exists(node_embeds_path) and len(os.listdir(node_embeds_path)) == num_frames
         embeds_ok = embeds_ok and osp.exists(reid_embeds_path) and len(os.listdir(reid_embeds_path)) == num_frames
         embeds_ok = embeds_ok or not self.dataset_params['precomputed_embeddings']
 
